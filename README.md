@@ -31,7 +31,9 @@ Currently the shader is heavily tied to the Three.js and WebGL way of doing thin
 
 **EARLY: Expect breaking changes!**
 
-The shader is being developed alongside a game project, so development is currently focused on the needs of that game. `TODO: Add a roadmap.` Please feel free to open an issue if you encounter any problems using the shader with Three.js.
+The shader is being developed alongside a game project, so development is currently focused on the needs of that game. Check [the roadmap on GitHub] for the current status. Please feel free to open an issue if you encounter any problems using the shader with Three.js.
+
+[the roadmap on GitHub]: https://github.com/BucketOSoftware/playshader-one/milestone/2
 
 ## Usage
 
