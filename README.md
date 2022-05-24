@@ -1,6 +1,6 @@
 # PlayShader One
 
-![PlayShader logo](logo.svg)
+<img src="logo.svg" width="780" alt="PlayShader logo">
 
 ![npm](https://img.shields.io/npm/v/playshader-one?style=for-the-badge)
 
