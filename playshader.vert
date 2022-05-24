@@ -18,17 +18,6 @@ attribute vec3 normal;
 attribute vec2 uv;
 */
 
-/*
-// TODO: support instancing
-#ifdef USE_INSTANCING
-    // Note that modelViewMatrix is not set when rendering an instanced model,
-    // but can be calculated from viewMatrix * modelMatrix.
-    //
-    // Basic Usage:
-    //   gl_Position = projectionMatrix * viewMatrix * modelMatrix * instanceMatrix * vec4(position, 1.0);
-    attribute mat4 instanceMatrix;
-#endif
-*/
 
 // TODO: does this do anything? Is it useful?
 // #pragma debug(on)
