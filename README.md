@@ -1,5 +1,7 @@
 # PlayShader One
 
+![PlayShader logo](logo.svg)
+
 ![npm](https://img.shields.io/npm/v/playshader-one?style=for-the-badge)
 
 A work-in-progress GLSL ES shader **(currently only set up to work with [Three.js])** that emulates the primitive graphical hardware used in an older game console
