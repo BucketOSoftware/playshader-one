@@ -1,5 +1,7 @@
 # PlayShader One
 
+![npm](https://img.shields.io/npm/v/playshader-one?style=for-the-badge)
+
 A work-in-progress GLSL ES shader **(currently only set up to work with [Three.js])** that emulates the primitive graphical hardware used in an older game console
 
 [three.js]: https://www.npmjs.com/package/three
@@ -95,7 +97,9 @@ scene.add(cube);
 ## License
 
 ```
-This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+This Source Code Form is subject to the terms of the Mozilla Public License,
+v. 2.0. If a copy of the MPL was not distributed with this file, You can obtain
+one at http://mozilla.org/MPL/2.0/.
 ```
 
 "PlayStation" is a registered trademark of Sony Interactive Entertainment Inc.
