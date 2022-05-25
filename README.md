@@ -1,8 +1,10 @@
 # PlayShader One
 
-<img src="logo.svg" width="780" alt="PlayShader logo">
+<img src="logo.svg" width="512" alt="PlayShader logo">
 
-![npm](https://img.shields.io/npm/v/playshader-one?style=for-the-badge)
+![npm version](https://flat.badgen.net/npm/v/playshader-one)
+![milestone progress](https://flat.badgen.net/github/milestones/bucketosoftware/playshader-one/2)
+![license](https://flat.badgen.net/github/license/bucketosoftware/playshader-one)
 
 A work-in-progress GLSL ES shader **(currently only set up to work with [Three.js])** that emulates the primitive graphical hardware used in an older game console
 
