@@ -6,6 +6,7 @@
  * this been a real application, I would have written better organized code.
  */
 const SKY_COLOR = 0x3c9f9c
+// Commonly used resolution for the hardware
 const RESOLUTION = [320, 240]
 let gl, scene, camera, light, ambient
 
@@ -16,8 +17,19 @@ let totalTime = 0
 
 const itemsToLoad = 7
 function loadingProgress(url, itemsLoaded, itemsTotal) {
-    // console.log("Loading:", url, itemsLoaded, itemsTotal);
-    console.log('Progress: %.0f%%', (itemsLoaded / itemsToLoad) * 100)
+    const percentage = (itemsLoaded / itemsToLoad) * 100
+    // console.log('Loading:', url, itemsLoaded, itemsTotal)
+    // console.log('Progress: %.0f%%', percentage)
+
+    const bar = document.getElementById('progressbar')
+    bar.style.width = `${percentage}%`
+    if (percentage > 99.9) {
+        bar.classList.add('loaded')
+    }
+}
+
+function gltfLoadingProgress(progress) {
+    const { lengthComputable, total, loaded } = progress
 }
 
 async function fetchShader(type) {
@@ -29,15 +41,20 @@ async function main() {
     document.body.style.backgroundColor = `#${SKY_COLOR.toString(16)}`
 
     // Start loading resources
-    
+
     const loader = new THREE.GLTFLoader()
     loader.manager.onStart = loadingProgress
     loader.manager.onProgress = loadingProgress
 
     const resourcesPromise = Promise.all([
         loader.loadAsync('nekostop.gltf'),
-        ['vert, frag'].map((t) => fetchShader(t)),
+        ...['vert', 'frag'].map((t) => fetchShader(t)),
     ])
+
+    // Don't show the progress bar unless the load time is noticeable
+    setTimeout(() => {
+        document.getElementById('progressbar').classList.remove('hidden')
+    }, 500)
 
     // Create the shader
 
@@ -48,7 +65,6 @@ async function main() {
             THREE.UniformsLib.lights,
             THREE.UniformsLib.fog,
             {
-                // Commonly used resolution for the hardware
                 resolution: { value: RESOLUTION },
                 map: { value: null },
             },
@@ -66,11 +82,10 @@ async function main() {
         // alpha: true,
     })
     gl.outputEncoding = THREE.sRGBEncoding
-    // gl.setPixelRatio(4)
 
     // gl.setSize(window.innerWidth, window.innerHeight)
     gl.setSize(...RESOLUTION)
-    // gl.setPixelRatio(window.devicePixelRatio * 3);
+    // gl.setPixelRatio(window.devicePixelRatio);
     gl.domElement.style.width = '640px'
     gl.domElement.style.height = '480px'
     // Ask the browser to upscale in a chunky fashion
@@ -100,7 +115,6 @@ async function main() {
     camera.lookAt(0, 3, 0)
 
     // Render something while we wait for assets to load
-    // TODO: display the logo and/or progress bar
 
     const geometry = new THREE.BoxGeometry()
     const material = new THREE.MeshPhongMaterial({ color: 0x00ff00 })
@@ -109,14 +123,10 @@ async function main() {
 
     requestAnimationFrame(render)
 
-
-
-    const [model, vert, frag] = await resourcesPromise;
- 
+    // Wait on resources and render
+    const [model, vert, frag] = await resourcesPromise
     psx.vertexShader = vert
     psx.fragmentShader = frag
-
-    // console.dir(model)
 
     house = model.scene.getObjectByName('Scene')
 
@@ -124,11 +134,12 @@ async function main() {
     house.traverse((obj) => {
         if (obj.name === 'lantern') {
             // TODO: find a way to make it look like this is lighting up the lantern, perhaps?
-            const ptLight = new THREE.PointLight(0x0033ff, 10, 2, 1);
-            ptLight.position.copy(obj.position);
-            obj.parent.add(ptLight);
+            const ptLight = new THREE.PointLight(0x0033ff, 10, 2, 1)
+            ptLight.position.copy(obj.position)
+            obj.parent.add(ptLight)
         }
-        if (obj.material && true) {
+        
+        if (obj.material) {
             const oldMaterial = obj.material
             obj.material = psx.clone()
             obj.material.uniforms.map.value = oldMaterial.map
@@ -136,13 +147,12 @@ async function main() {
         }
     })
 
-    scene.remove(cube)
+    scene.remove(loading)
     scene.add(model.scene)
 
     lastTime = performance.now()
     requestAnimationFrame(render)
 }
-
 
 const lightMoveSpeed = 50
 function render(time) {
@@ -158,8 +168,9 @@ function render(time) {
         house.rotateY(Math.PI * 0.05 * delta)
         light.position.x = Math.sin(totalTime / lightMoveSpeed) * 30
         light.position.z = Math.cos(totalTime / lightMoveSpeed) * 5
-    } else if (loadModel) {
-        loadModel.rotateY(Math.PI * 2 * delta)
+    } else if (loading) {
+        requestAnimationFrame(render)
+        loading.rotateY(Math.PI * 2 * delta)
     }
     gl.render(scene, camera)
 }
