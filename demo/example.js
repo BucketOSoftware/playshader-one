@@ -5,7 +5,7 @@
  * tooling, etc.), not to demonstrate best practices, whatever those are. Had
  * this been a real application, I would have written better organized code.
  */
-const SKY_COLOR = 0x3c9f9c
+const SKY_COLOR = 0x87ceeb
 // Commonly used resolution for the hardware
 const RESOLUTION = [320, 240]
 let gl, scene, camera, light, ambient
@@ -38,6 +38,8 @@ async function fetchShader(type) {
 }
 
 async function main() {
+    // TODO: check browser compatibility
+
     document.body.style.backgroundColor = `#${SKY_COLOR.toString(16)}`
 
     // Start loading resources
@@ -90,6 +92,7 @@ async function main() {
     gl.domElement.style.height = '480px'
     // Ask the browser to upscale in a chunky fashion
     gl.domElement.style.imageRendering = 'pixelated'
+    gl.domElement.imageSmoothingEnabled = false;
     document.body.appendChild(gl.domElement)
 
     // Scene
