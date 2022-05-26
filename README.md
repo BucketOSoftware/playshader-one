@@ -9,6 +9,9 @@
 A work-in-progress GLSL ES shader **(currently only set up to work with [Three.js])** that emulates the primitive graphical hardware used in an older game console
 
 [three.js]: https://www.npmjs.com/package/three
+## [Live Demo]
+
+[Live Demo]: https://bucketosoftware.github.io/playshader-one/demo/
 
 ## Goals
 
