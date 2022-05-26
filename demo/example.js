@@ -1,16 +1,16 @@
 /*
  * playshader-one demo
- *
- * IMPORTANT NOTE: this code is designed to be straightforward (no build
- * tooling, etc.), not to demonstrate best practices, whatever those are. Had
- * this been a real application, I would have written better organized code.
  */
+
+document.addEventListener('DOMContentLoaded', preload)
+
 const SKY_COLOR = 0x87ceeb
 // Commonly used resolution for the hardware
 const RESOLUTION = [320, 240]
-let gl, scene, camera, sun, ambient
+let gui, gl, scene, camera, sun, ambient
 
-let loading, house
+let resourcesPromise
+let house
 
 let lastTime = 0
 let totalTime = 0
@@ -26,9 +26,6 @@ function loadingProgress(url, itemsLoaded, itemsTotal) {
 
     const bar = document.getElementById('progressbar')
     bar.style.width = `${percentage}%`
-    if (percentage > 99.9) {
-        bar.classList.add('loaded')
-    }
 }
 
 function gltfLoadingProgress(progress) {
@@ -40,26 +37,26 @@ async function fetchShader(type) {
     return file.text()
 }
 
-async function main() {
+async function preload() {
     // TODO: check browser compatibility
 
-    document.body.style.backgroundColor = `#${SKY_COLOR.toString(16)}`
-
     // Start loading resources
-
+    
+    document.body.className = 'loading'
     const loader = new THREE.GLTFLoader()
     loader.manager.onStart = loadingProgress
     loader.manager.onProgress = loadingProgress
 
-    const resourcesPromise = Promise.all([
+    resourcesPromise = Promise.all([
         loader.loadAsync('nekostop.gltf'),
         ...['vert', 'frag'].map((t) => fetchShader(t)),
     ])
 
-    // Don't show the progress bar unless the load time is noticeable
-    setTimeout(() => {
-        document.getElementById('progressbar').classList.remove('hidden')
-    }, 500)
+    // Give the viewer some time to appreciate the loading screen
+    setTimeout(main, 1500);
+}
+
+async function main() {
 
     // Create the shader
 
@@ -88,7 +85,9 @@ async function main() {
     // Ask the browser to upscale in a chunky fashion
     gl.domElement.style.imageRendering = 'pixelated'
     gl.domElement.imageSmoothingEnabled = false
-    document.body.appendChild(gl.domElement)
+    const app = document.getElementById('app')
+    app.prepend(gl.domElement)
+    app.classList.remove('hidden')
 
     // Scene
 
@@ -118,14 +117,6 @@ async function main() {
         camera.lookAt(0, 3, 0)
     }
 
-    // Render something while we wait for assets to load
-
-    const geometry = new THREE.BoxGeometry()
-    const material = new THREE.MeshPhongMaterial({ color: 0x00ff00 })
-    const loadModel = new THREE.Mesh(geometry, material)
-    scene.add(loadModel)
-
-    requestAnimationFrame(render)
     // Set up a UI for testing params
     const gui = new guify({
         title: 'playshader-one',
@@ -133,6 +124,7 @@ async function main() {
         barMode: 'offset',
         opacity: 0.9,
     })
+    
     gui.Register([
         // prettier-ignore
         {
@@ -151,8 +143,11 @@ async function main() {
         },
     ])
 
-    // Wait on resources and render
+    // Wait on resources and then render
     const [model, vert, frag] = await resourcesPromise
+    const bar = document.getElementById('progressbar')
+    bar.style.width = '100%'
+
     psx.vertexShader = vert
     psx.fragmentShader = frag
 
@@ -175,11 +170,12 @@ async function main() {
         }
     })
 
-    scene.remove(loading)
     scene.add(model.scene)
 
     lastTime = performance.now()
     requestAnimationFrame(render)
+    document.body.style.backgroundColor = `#${SKY_COLOR.toString(16)}`
+    document.body.className = 'loaded'
 }
 
 const lightMoveSpeed = 50
@@ -190,8 +186,8 @@ function render(time) {
         // appearance. Maybe there's a way to do that in glsl
         const aspect = RESOLUTION[0] / RESOLUTION[1]
         const h = window.innerHeight
-        gl.domElement.style.width = h * aspect + 'px'
-        gl.domElement.style.height = h + 'px'
+        gl.domElement.style.width = `${h * aspect}px`
+        gl.domElement.style.height = `${h}px`
 
         needsResize = false
     }
@@ -214,5 +210,3 @@ function render(time) {
     }
     gl.render(scene, camera)
 }
-
-document.addEventListener('DOMContentLoaded', main)
