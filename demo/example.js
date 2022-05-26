@@ -8,7 +8,7 @@
 const SKY_COLOR = 0x87ceeb
 // Commonly used resolution for the hardware
 const RESOLUTION = [320, 240]
-let gl, scene, camera, light, ambient
+let gl, scene, camera, sun, ambient
 
 let loading, house
 
@@ -101,10 +101,10 @@ async function main() {
     const ambient = new THREE.AmbientLight(0x404040)
     scene.add(ambient)
 
-    light = new THREE.DirectionalLight(0xffffff, 5)
-    light.position.set(0, 20, 5)
-    light.target.position.set(0, 0, 0)
-    scene.add(light)
+    sun = new THREE.DirectionalLight(0xffffff, 3)
+    sun.position.set(0, 20, 5)
+    sun.target.position.set(0, 0, 0)
+    scene.add(sun)
 
     // Camera
     {
@@ -126,6 +126,30 @@ async function main() {
     scene.add(loadModel)
 
     requestAnimationFrame(render)
+    // Set up a UI for testing params
+    const gui = new guify({
+        title: 'playshader-one',
+        theme: 'light',
+        barMode: 'offset',
+        opacity: 0.9,
+    })
+    gui.Register([
+        // prettier-ignore
+        {
+            type: 'range', label: 'Sunlight',
+            min: 0, max: 5, step: 0.25,
+            object: sun, property: 'intensity',
+        },
+        // prettier-ignore
+        {
+            type: 'interval', label: 'Fog',
+            min: 0, max: 40, precision: 0,
+            initial: [scene.fog.near, scene.fog.far],
+            onChange: (range) => {
+                [scene.fog.near, scene.fog.far] = range
+            },
+        },
+    ])
 
     // Wait on resources and render
     const [model, vert, frag] = await resourcesPromise
@@ -182,8 +206,8 @@ function render(time) {
     if (house) {
         requestAnimationFrame(render)
         house.rotateY(Math.PI * 0.05 * delta)
-        light.position.x = Math.sin(totalTime / lightMoveSpeed) * 30
-        light.position.z = Math.cos(totalTime / lightMoveSpeed) * 5
+        sun.position.x = Math.sin(totalTime / lightMoveSpeed) * 30
+        sun.position.z = Math.cos(totalTime / lightMoveSpeed) * 5
     } else if (loading) {
         requestAnimationFrame(render)
         loading.rotateY(Math.PI * 2 * delta)

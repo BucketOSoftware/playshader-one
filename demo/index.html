@@ -8,6 +8,7 @@
   <meta name="description" content="Demo: a GLSL shader that emulates the hardware of an old game console" />
   <!-- TODO: show something before these are loaded -->
   <script defer src="https://unpkg.com/three@0.140.2/build/three.min.js"></script>
+  <script defer src="https://unpkg.com/guify@0.15.1/lib/guify.min.js"></script>
   <script defer src="https://unpkg.com/three@0.140.2/examples/js/loaders/GLTFLoader.js"></script>
   <script module src="example.js"></script>
 
@@ -89,7 +90,7 @@
                     fill: #151513;
                     color: #fff;
                     position: absolute;
-                    top: 0;
+                    top: var(--size-menu-bar-height);
                     border: 0;
                     right: 0;
                 " aria-hidden="true">
