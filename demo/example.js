@@ -2,21 +2,20 @@
  * playshader-one demo
  */
 
-document.addEventListener('DOMContentLoaded', preload)
-
 const SKY_COLOR = 0x87ceeb
 const aspect = 4 / 3
+
+// State
+
 // Commonly used resolution for the hardware
 const resolution = [320, 240]
 
-let gui, gl, scene, camera, sun, ambient
-let shader
-let shaderEnabled = true
-
-let stockShaders = new Map()
-
-let resourcesPromise
+let gl, scene, camera, sun, ambient
 let house
+
+let shaderEnabled = true
+let playShader
+let stockShaders = new Map()
 
 let lastTime = 0
 let totalTime = 0
@@ -24,89 +23,130 @@ let totalTime = 0
 let needsResize = true
 window.addEventListener('resize', () => (needsResize = true))
 
-const itemsToLoad = 7
-function loadingProgress(url, itemsLoaded, itemsTotal) {
-    const percentage = (itemsLoaded / itemsToLoad) * 100
-    // console.log('Loading:', url, itemsLoaded, itemsTotal)
-    // console.log('Progress: %.0f%%', percentage)
+// Promises-based async loading system for scripts and assets
 
-    const bar = document.getElementById('progressbar')
-    bar.style.width = `${percentage}%`
+let promises = {
+    resolved: 0,
 }
 
-function gltfLoadingProgress(progress) {
-    const { lengthComputable, total, loaded } = progress
+function pageActive() {
+    return new Promise((resolve) => {
+        if (document.readyState === 'interactive') {
+            promises.resolved += 1
+            resolve()
+        } else {
+            promises.resolved += 1
+            document.addEventListener('DOMContentLoaded', () => resolve())
+        }
+    })
+}
+
+function loadScript(url) {
+    return new Promise((resolve) => {
+        console.log('loading!', url)
+
+        const script = document.createElement('script')
+        script.async = true
+        script.src = url
+        script.addEventListener('load', () => {
+            promises.resolved += 1
+            resolve()
+        })
+        document.head.appendChild(script)
+    })
+}
+
+async function loadGltfLoader() {
+    await promises.three
+    await loadScript(
+        'https://unpkg.com/three@0.140.2/examples/js/loaders/GLTFLoader.js'
+    )
+    promises.resolved += 1
+}
+
+async function loadModel() {
+    await promises.gltfLoader
+    const loader = new THREE.GLTFLoader()
+    loader.manager.onStart = gltfLoadingProgress
+    loader.manager.onProgress = gltfLoadingProgress
+    const model = await loader.loadAsync('nekostop.gltf')
+    promises.resolved += 1
+    return model
 }
 
 async function fetchShader(type) {
+    console.log('fetching', type)
     const file = await fetch(`playshader.${type}`)
-    return file.text()
+    const text = await file.text()
+    promises.resolved += 1
+    return text
 }
 
-function setResolution(res) {
-    const [w, h] = res.split('×').map((n) => Number.parseInt(n))
-    console.log(w, h)
+promises.ready = pageActive()
+promises.three = loadScript(
+    'https://unpkg.com/three@0.140.2/build/three.min.js'
+)
+promises.gltfLoader = loadGltfLoader()
+promises.guify = loadScript('https://unpkg.com/guify@0.15.1/lib/guify.min.js')
 
-    resolution[0] = w
-    resolution[1] = h
-    shader.uniforms.resolution.value = resolution // necessary?
-    needsResize = true
+// console.dir(promises.gltfLoader)
+promises.model = loadModel()
+promises.vertexShader = fetchShader('vert')
+promises.fragmentShader = fetchShader('frag')
+
+promises.iWorkedHardOnThisLoadingScreen = new Promise((resolve) => {
+    setTimeout(() => {
+        promises.resolved += 1
+        resolve()
+    }, 1500)
+})
+
+let resourcesLoaded = 0
+let resourcesTotal = 7
+
+function updateProgress() {
+    console.dir(Object.keys(promises))
+    const promisesTotal = Object.keys(promises).length - 1
+
+    // One of the promises is incrementing `resolved` twice. How about that
+    const progress =
+        (resourcesLoaded + promises.resolved) /
+        (resourcesTotal + promisesTotal - 1)
+
+    const bar = document.getElementById('progressbar')
+    bar.style.width = `${Math.round(progress * 100)}%`
+
+    if (progress < 1) {
+        setTimeout(updateProgress, 250)
+    }
 }
 
-function setPlayShaderEnabled(enable) {
-    shaderEnabled = enable
+function gltfLoadingProgress(url, itemsLoaded, itemsTotal) {
+    console.log('Loading:', url, itemsLoaded, itemsTotal)
 
-    // Seems like there'd be a better way to do this
-    house.traverse((obj) => {
-        const stock = stockShaders.get(obj)
-
-        if (stock) {
-            const oldShader = obj.material
-            const newShader = enable ? shader.clone() : stock
-
-            // leave the old texture in the stock shader
-            if (enable) {
-                const texture = stock.map.clone()
-                newShader.uniforms.map.value = texture
-                newShader.needsUpdate = true
-            }
-
-            if (oldShader !== stock) {
-                oldShader.dispose()
-            }
-
-            obj.material = newShader
-        }
-    })
-
-    // The normal shader is shown at full res
-    needsResize = true
+    resourcesLoaded = itemsLoaded
 }
 
-async function preload() {
-    // TODO: check browser compatibility
-
-    // Start loading resources
-
-    document.body.className = 'loading'
-    const loader = new THREE.GLTFLoader()
-    loader.manager.onStart = loadingProgress
-    loader.manager.onProgress = loadingProgress
-
-    resourcesPromise = Promise.all([
-        loader.loadAsync('nekostop.gltf'),
-        ...['vert', 'frag'].map((t) => fetchShader(t)),
-    ])
-
-    // Give the viewer some time to appreciate the loading screen
-    setTimeout(main, 1500)
-}
+main()
 
 async function main() {
+    updateProgress()
+
+    console.log('preloading')
+    console.log(document.readyState)
+
+    document.body.className = 'loading'
 
     // Create the shader
 
-    shader = new THREE.ShaderMaterial({
+    const [vert, frag] = await Promise.all([
+        promises.vertexShader,
+        promises.fragmentShader,
+        promises.three,
+        promises.iWorkedHardOnThisLoadingScreen,
+    ])
+
+    playShader = new THREE.ShaderMaterial({
         lights: true,
         fog: true,
         uniforms: THREE.UniformsUtils.merge([
@@ -121,8 +161,8 @@ async function main() {
             // NO_DITHERING: 1,
         },
         glslVersion: THREE.GLSL3,
-        vertexShader: null,
-        fragmentShader: null,
+        vertexShader: vert,
+        fragmentShader: frag,
     })
 
     gl = new THREE.WebGLRenderer({ antialias: false })
@@ -163,12 +203,9 @@ async function main() {
     }
 
     // Wait on resources and then render
-    const [model, vert, frag] = await resourcesPromise
+    const model = await promises.model
     const bar = document.getElementById('progressbar')
     bar.style.width = '100%'
-
-    shader.vertexShader = vert
-    shader.fragmentShader = frag
 
     house = model.scene.getObjectByName('Scene')
 
@@ -183,7 +220,7 @@ async function main() {
 
         if (obj.material) {
             const oldMaterial = obj.material
-            const newMaterial = shader
+            const newMaterial = playShader
             stockShaders.set(obj, oldMaterial.clone())
 
             obj.material = newMaterial.clone()
@@ -217,7 +254,7 @@ async function main() {
             initial: resolution.join('×'),
             options: [
                 // Common resolutions and one very unlikely one
-                '256×224', '320×240', '512×240', '640×240', '1440×1080'
+                '256×224', '320×240', '512×240', '640×480', '1440×1080'
             ],
             onChange: setResolution
         },
@@ -285,4 +322,44 @@ function render(time) {
         loading.rotateY(Math.PI * 2 * delta)
     }
     gl.render(scene, camera)
+}
+
+function setResolution(res) {
+    const [w, h] = res.split('×').map((n) => Number.parseInt(n))
+    console.log(w, h)
+
+    resolution[0] = w
+    resolution[1] = h
+    playShader.uniforms.resolution.value = resolution // necessary?
+    needsResize = true
+}
+
+function setPlayShaderEnabled(enable) {
+    shaderEnabled = enable
+
+    // Seems like there'd be a better way to do this
+    house.traverse((obj) => {
+        const stock = stockShaders.get(obj)
+
+        if (stock) {
+            const oldShader = obj.material
+            const newShader = enable ? playShader.clone() : stock
+
+            // leave the old texture in the stock shader
+            if (enable) {
+                const texture = stock.map.clone()
+                newShader.uniforms.map.value = texture
+                newShader.needsUpdate = true
+            }
+
+            if (oldShader !== stock) {
+                oldShader.dispose()
+            }
+
+            obj.material = newShader
+        }
+    })
+
+    // The normal shader is shown at full res
+    needsResize = true
 }
