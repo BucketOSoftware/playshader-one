@@ -5,9 +5,11 @@
 document.addEventListener('DOMContentLoaded', preload)
 
 const SKY_COLOR = 0x87ceeb
+const aspect = 4/3
 // Commonly used resolution for the hardware
-const RESOLUTION = [320, 240]
-let gui, gl, scene, camera, sun, ambient
+const resolution = [320, 240]
+
+let gui, gl, scene, camera, sun, ambient, shader
 
 let resourcesPromise
 let house
@@ -37,6 +39,17 @@ async function fetchShader(type) {
     return file.text()
 }
 
+function setResolution(res) {
+    const [w, h] = res.split('x').map(n => Number.parseInt(n));
+    console.log(w, h)
+
+    resolution[0] = w
+    resolution[1] = h
+    gl.setSize(w, h)
+    shader.uniforms.resolution.value = resolution // necessary?
+    needsResize = true
+}
+
 async function preload() {
     // TODO: check browser compatibility
 
@@ -60,14 +73,14 @@ async function main() {
 
     // Create the shader
 
-    const psx = new THREE.ShaderMaterial({
+    shader = new THREE.ShaderMaterial({
         lights: true,
         fog: true,
         uniforms: THREE.UniformsUtils.merge([
             THREE.UniformsLib.lights,
             THREE.UniformsLib.fog,
             {
-                resolution: { value: RESOLUTION },
+                resolution: { value: resolution },
                 map: { value: null },
             },
         ]),
@@ -81,7 +94,7 @@ async function main() {
 
     gl = new THREE.WebGLRenderer({ antialias: false })
     gl.outputEncoding = THREE.sRGBEncoding
-    gl.setSize(...RESOLUTION)
+    gl.setSize(...resolution)
     // Ask the browser to upscale in a chunky fashion
     gl.domElement.style.imageRendering = 'pixelated'
     gl.domElement.imageSmoothingEnabled = false
@@ -108,7 +121,6 @@ async function main() {
     // Camera
     {
         const fov = 60
-        const aspect = RESOLUTION[0] / RESOLUTION[1]
         const near = 1
         const far = 1000
         camera = new THREE.PerspectiveCamera(fov, aspect, near, far)
@@ -126,6 +138,19 @@ async function main() {
     })
     
     gui.Register([
+        // prettier-ignore
+        {
+            type: 'checkbox', label: 'Disable PlayShader'
+
+        },
+        // prettier-ignore
+        {
+            type: 'select', label: 'Resolution',
+            options: [
+                '320x240', '256x240', '368x240', '512x240', '640x480', '1920x1080'
+            ],
+            onChange: setResolution
+        },
         // prettier-ignore
         {
             type: 'range', label: 'Sunlight',
@@ -148,8 +173,8 @@ async function main() {
     const bar = document.getElementById('progressbar')
     bar.style.width = '100%'
 
-    psx.vertexShader = vert
-    psx.fragmentShader = frag
+    shader.vertexShader = vert
+    shader.fragmentShader = frag
 
     house = model.scene.getObjectByName('Scene')
 
@@ -164,7 +189,7 @@ async function main() {
 
         if (obj.material) {
             const oldMaterial = obj.material
-            obj.material = psx.clone()
+            obj.material = shader.clone()
             obj.material.uniforms.map.value = oldMaterial.map
             oldMaterial.dispose()
         }
@@ -184,7 +209,6 @@ function render(time) {
     if (needsResize) {
         // We don't resize the canvas itself because we'd lose the low-res
         // appearance. Maybe there's a way to do that in glsl
-        const aspect = RESOLUTION[0] / RESOLUTION[1]
         const h = window.innerHeight
         gl.domElement.style.width = `${h * aspect}px`
         gl.domElement.style.height = `${h}px`
