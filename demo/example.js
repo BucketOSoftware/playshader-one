@@ -5,7 +5,7 @@
 document.addEventListener('DOMContentLoaded', preload)
 
 const SKY_COLOR = 0x87ceeb
-const aspect = 4/3
+const aspect = 4 / 3
 // Commonly used resolution for the hardware
 const resolution = [320, 240]
 
@@ -44,7 +44,7 @@ async function fetchShader(type) {
 }
 
 function setResolution(res) {
-    const [w, h] = res.split('×').map(n => Number.parseInt(n));
+    const [w, h] = res.split('×').map((n) => Number.parseInt(n))
     console.log(w, h)
 
     resolution[0] = w
@@ -70,7 +70,7 @@ function setPlayShaderEnabled(enable) {
                 newShader.uniforms.map.value = texture
                 newShader.needsUpdate = true
             }
-            
+
             if (oldShader !== stock) {
                 oldShader.dispose()
             }
@@ -87,7 +87,7 @@ async function preload() {
     // TODO: check browser compatibility
 
     // Start loading resources
-    
+
     document.body.className = 'loading'
     const loader = new THREE.GLTFLoader()
     loader.manager.onStart = loadingProgress
@@ -99,7 +99,7 @@ async function preload() {
     ])
 
     // Give the viewer some time to appreciate the loading screen
-    setTimeout(main, 1500);
+    setTimeout(main, 1500)
 }
 
 async function main() {
@@ -182,9 +182,9 @@ async function main() {
         }
 
         if (obj.material) {
-            const oldMaterial = obj.material;
-            const newMaterial = shader;
-            stockShaders.set(obj, oldMaterial.clone());
+            const oldMaterial = obj.material
+            const newMaterial = shader
+            stockShaders.set(obj, oldMaterial.clone())
 
             obj.material = newMaterial.clone()
             obj.material.uniforms.map.value = oldMaterial.map.clone()
@@ -203,7 +203,7 @@ async function main() {
         barMode: 'offset',
         opacity: 0.9,
     })
-    
+
     gui.Register([
         // prettier-ignore
         {
@@ -238,7 +238,6 @@ async function main() {
         },
     ])
 
-
     // And, go
 
     lastTime = performance.now()
@@ -258,7 +257,7 @@ function render(time) {
             gl.setPixelRatio(1)
 
             const h = window.innerHeight
-            
+
             gl.domElement.style.width = `${h * aspect}px`
             gl.domElement.style.height = `${h}px`
         } else {
