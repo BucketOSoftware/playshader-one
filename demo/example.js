@@ -40,7 +40,7 @@ async function fetchShader(type) {
 }
 
 function setResolution(res) {
-    const [w, h] = res.split('x').map(n => Number.parseInt(n));
+    const [w, h] = res.split('×').map(n => Number.parseInt(n));
     console.log(w, h)
 
     resolution[0] = w
@@ -146,8 +146,10 @@ async function main() {
         // prettier-ignore
         {
             type: 'select', label: 'Resolution',
+            initial: resolution.join('×'),
             options: [
-                '320x240', '256x240', '368x240', '512x240', '640x480', '1920x1080'
+                // Common resolutions and one very unlikely one
+                '256×224', '256×240', '320×240', '368×240', '512×240', '640×240', '1440×1080'
             ],
             onChange: setResolution
         },
