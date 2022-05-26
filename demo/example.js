@@ -11,6 +11,7 @@ const resolution = [320, 240]
 
 let gui, gl, scene, camera, sun, ambient
 let shader
+let shaderEnabled = true
 
 let stockShaders = new Map()
 
@@ -48,12 +49,13 @@ function setResolution(res) {
 
     resolution[0] = w
     resolution[1] = h
-    gl.setSize(w, h)
     shader.uniforms.resolution.value = resolution // necessary?
     needsResize = true
 }
 
-function setPlayShader(enable) {
+function setPlayShaderEnabled(enable) {
+    shaderEnabled = enable
+
     // Seems like there'd be a better way to do this
     house.traverse((obj) => {
         const stock = stockShaders.get(obj)
@@ -76,6 +78,9 @@ function setPlayShader(enable) {
             obj.material = newShader
         }
     })
+
+    // The normal shader is shown at full res
+    needsResize = true
 }
 
 async function preload() {
@@ -204,7 +209,7 @@ async function main() {
         {
             type: 'checkbox', label: 'Enable Shader',
             initial: true,
-            onChange: setPlayShader
+            onChange: setPlayShaderEnabled
         },
         // prettier-ignore
         {
@@ -212,7 +217,7 @@ async function main() {
             initial: resolution.join('×'),
             options: [
                 // Common resolutions and one very unlikely one
-                '256×224', '256×240', '320×240', '368×240', '512×240', '640×240', '1440×1080'
+                '256×224', '320×240', '512×240', '640×240', '1440×1080'
             ],
             onChange: setResolution
         },
@@ -246,11 +251,20 @@ const lightMoveSpeed = 50
 function render(time) {
     // We don't really need to do this every time the event fires
     if (needsResize) {
-        // We don't resize the canvas itself because we'd lose the low-res
-        // appearance. Maybe there's a way to do that in glsl
-        const h = window.innerHeight
-        gl.domElement.style.width = `${h * aspect}px`
-        gl.domElement.style.height = `${h}px`
+        if (shaderEnabled) {
+            // We don't resize the canvas itself because we'd lose the low-res
+            // appearance. Maybe there's a way to do that in glsl
+            gl.setSize(resolution[0], resolution[1])
+            gl.setPixelRatio(1)
+
+            const h = window.innerHeight
+            
+            gl.domElement.style.width = `${h * aspect}px`
+            gl.domElement.style.height = `${h}px`
+        } else {
+            gl.setSize(window.innerHeight * aspect, window.innerHeight)
+            gl.setPixelRatio(window.devicePixelRatio)
+        }
 
         needsResize = false
     }
