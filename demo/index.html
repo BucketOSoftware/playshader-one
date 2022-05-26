@@ -15,7 +15,17 @@
     body {
       margin: 0;
       padding: 0;
+      height: 100%;
       overflow: hidden;
+    }
+
+    canvas {
+      z-index: 0;
+
+      /* Seems like the easiest way to center the canvas even when it's bigger than the innerWidth */
+      position: absolute;
+      left: 50%;
+      transform: translate(-50%, 0);
     }
 
     #progressbar {
@@ -56,6 +66,10 @@
     #logo img {
       height: 8vw;
       filter: brightness(100)  opacity(75%);
+    }
+
+    a.github-corner > svg {
+      z-index: 30;
     }
   </style>
 </head>

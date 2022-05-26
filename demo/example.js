@@ -15,6 +15,9 @@ let loading, house
 let lastTime = 0
 let totalTime = 0
 
+let needsResize = true
+window.addEventListener('resize', () => (needsResize = true))
+
 const itemsToLoad = 7
 function loadingProgress(url, itemsLoaded, itemsTotal) {
     const percentage = (itemsLoaded / itemsToLoad) * 100
@@ -79,20 +82,12 @@ async function main() {
         fragmentShader: null,
     })
 
-    gl = new THREE.WebGLRenderer({
-        antialias: false,
-        // alpha: true,
-    })
+    gl = new THREE.WebGLRenderer({ antialias: false })
     gl.outputEncoding = THREE.sRGBEncoding
-
-    // gl.setSize(window.innerWidth, window.innerHeight)
     gl.setSize(...RESOLUTION)
-    // gl.setPixelRatio(window.devicePixelRatio);
-    gl.domElement.style.width = '640px'
-    gl.domElement.style.height = '480px'
     // Ask the browser to upscale in a chunky fashion
     gl.domElement.style.imageRendering = 'pixelated'
-    gl.domElement.imageSmoothingEnabled = false;
+    gl.domElement.imageSmoothingEnabled = false
     document.body.appendChild(gl.domElement)
 
     // Scene
@@ -112,10 +107,16 @@ async function main() {
     scene.add(light)
 
     // Camera
-
-    camera = new THREE.PerspectiveCamera(60, 4 / 3, 1, 1000)
-    camera.position.set(0, 9, 14)
-    camera.lookAt(0, 3, 0)
+    {
+        const fov = 60
+        const aspect = RESOLUTION[0] / RESOLUTION[1]
+        const near = 1
+        const far = 1000
+        camera = new THREE.PerspectiveCamera(fov, aspect, near, far)
+        // camera.aspect
+        camera.position.set(0, 9, 14)
+        camera.lookAt(0, 3, 0)
+    }
 
     // Render something while we wait for assets to load
 
@@ -141,7 +142,7 @@ async function main() {
             ptLight.position.copy(obj.position)
             obj.parent.add(ptLight)
         }
-        
+
         if (obj.material) {
             const oldMaterial = obj.material
             obj.material = psx.clone()
@@ -159,6 +160,18 @@ async function main() {
 
 const lightMoveSpeed = 50
 function render(time) {
+    // We don't really need to do this every time the event fires
+    if (needsResize) {
+        // We don't resize the canvas itself because we'd lose the low-res
+        // appearance. Maybe there's a way to do that in glsl
+        const aspect = RESOLUTION[0] / RESOLUTION[1]
+        const h = window.innerHeight
+        gl.domElement.style.width = h * aspect + 'px'
+        gl.domElement.style.height = h + 'px'
+
+        needsResize = false
+    }
+
     let delta = (time - lastTime) / 1000
     if (delta > 1) {
         delta = 0.1
