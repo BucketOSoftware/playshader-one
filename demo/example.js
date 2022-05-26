@@ -9,7 +9,10 @@ const aspect = 4/3
 // Commonly used resolution for the hardware
 const resolution = [320, 240]
 
-let gui, gl, scene, camera, sun, ambient, shader
+let gui, gl, scene, camera, sun, ambient
+let shader
+
+let stockShaders = new Map()
 
 let resourcesPromise
 let house
@@ -48,6 +51,31 @@ function setResolution(res) {
     gl.setSize(w, h)
     shader.uniforms.resolution.value = resolution // necessary?
     needsResize = true
+}
+
+function setPlayShader(enable) {
+    // Seems like there'd be a better way to do this
+    house.traverse((obj) => {
+        const stock = stockShaders.get(obj)
+
+        if (stock) {
+            const oldShader = obj.material
+            const newShader = enable ? shader.clone() : stock
+
+            // leave the old texture in the stock shader
+            if (enable) {
+                const texture = stock.map.clone()
+                newShader.uniforms.map.value = texture
+                newShader.needsUpdate = true
+            }
+            
+            if (oldShader !== stock) {
+                oldShader.dispose()
+            }
+
+            obj.material = newShader
+        }
+    })
 }
 
 async function preload() {
@@ -129,7 +157,41 @@ async function main() {
         camera.lookAt(0, 3, 0)
     }
 
+    // Wait on resources and then render
+    const [model, vert, frag] = await resourcesPromise
+    const bar = document.getElementById('progressbar')
+    bar.style.width = '100%'
+
+    shader.vertexShader = vert
+    shader.fragmentShader = frag
+
+    house = model.scene.getObjectByName('Scene')
+
+    // Apply the PlayShader One material
+    house.traverse((obj) => {
+        if (obj.name === 'lantern') {
+            // TODO: find a way to make it look like this is lighting up the lantern, perhaps?
+            const ptLight = new THREE.PointLight(0x0033ff, 10, 2, 1)
+            ptLight.position.copy(obj.position)
+            obj.parent.add(ptLight)
+        }
+
+        if (obj.material) {
+            const oldMaterial = obj.material;
+            const newMaterial = shader;
+            stockShaders.set(obj, oldMaterial.clone());
+
+            obj.material = newMaterial.clone()
+            obj.material.uniforms.map.value = oldMaterial.map.clone()
+
+            oldMaterial.dispose()
+        }
+    })
+
+    scene.add(model.scene)
+
     // Set up a UI for testing params
+
     const gui = new guify({
         title: 'playshader-one',
         theme: 'light',
@@ -140,8 +202,9 @@ async function main() {
     gui.Register([
         // prettier-ignore
         {
-            type: 'checkbox', label: 'Disable PlayShader'
-
+            type: 'checkbox', label: 'Enable Shader',
+            initial: true,
+            onChange: setPlayShader
         },
         // prettier-ignore
         {
@@ -170,34 +233,8 @@ async function main() {
         },
     ])
 
-    // Wait on resources and then render
-    const [model, vert, frag] = await resourcesPromise
-    const bar = document.getElementById('progressbar')
-    bar.style.width = '100%'
 
-    shader.vertexShader = vert
-    shader.fragmentShader = frag
-
-    house = model.scene.getObjectByName('Scene')
-
-    // Apply the PlayShader One material
-    house.traverse((obj) => {
-        if (obj.name === 'lantern') {
-            // TODO: find a way to make it look like this is lighting up the lantern, perhaps?
-            const ptLight = new THREE.PointLight(0x0033ff, 10, 2, 1)
-            ptLight.position.copy(obj.position)
-            obj.parent.add(ptLight)
-        }
-
-        if (obj.material) {
-            const oldMaterial = obj.material
-            obj.material = shader.clone()
-            obj.material.uniforms.map.value = oldMaterial.map
-            oldMaterial.dispose()
-        }
-    })
-
-    scene.add(model.scene)
+    // And, go
 
     lastTime = performance.now()
     requestAnimationFrame(render)
