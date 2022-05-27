@@ -61,15 +61,17 @@ void main(void) {
     // TODO: emulate original hardware's texture transparency
     vec4 texel = texture2D(map, v_uv);
 
+    // TODO: Round off the color depth of the texel if desired, but doing a
+    // simple multiply-round-divide doesn't seem right. Maybe quantize ahead of
+    // time.
+
     // Apply lighting
-    gl_FragColor = vec4(texel.rgb * (ambientLightColor + v_diffuse), texel.a);
+    // TODO: again, not sure why dividing the ambient light makes it look more
+    // like the stock shaders
+    vec4 lightColor = vec4(v_diffuse + max(ambientLightColor / 2.0, 0.0), 1.0);
+    gl_FragColor = texel * lightColor;
 
     #include <fog_fragment>
-
-    if(gl_FragColor.a <= 0.01) {
-        discard;
-        return; // TODO: does discard implicitly return, or ignore later code?
-    }
 
     // Dither
     gl_FragColor = psx_dither(gl_FragColor);

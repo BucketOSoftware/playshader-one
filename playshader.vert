@@ -18,10 +18,8 @@ attribute vec3 normal;
 attribute vec2 uv;
 */
 
-
 // TODO: does this do anything? Is it useful?
 // #pragma debug(on)
-
 
 // Begin shader-specific params
 
@@ -53,31 +51,30 @@ vec4 gte_round(in vec4 v) {
     return pixel_space;
 }
 
-// Calculate per-vertex shading
+// Returns the amount of light hitting the vertex, 0..1
 // TODO: support point lights (and other types?)
-float gouraud(DirectionalLight light) {
+float gouraud(DirectionalLight light, vec3 geomNormal) {
     // Calculate the vert's normal in eye space
-    vec3 eyeSpaceNormal = (modelViewMatrix * vec4(normal, 0.0)).xyz;
+    vec3 eyeSpaceNormal = normalize((modelViewMatrix * vec4(geomNormal, 0.0)).xyz);
 
-    // Light vector in eye space: apparently already calculated
-    // TODO: is this normalize even necessary?
-    vec3 lightNormal = normalize(light.direction);
+    // Light direction is already in world space
+    vec3 lightNormal = normalize((viewMatrix * vec4(light.direction, 0.0)).xyz);
 
     // Dot product of the two gives us the amount of lighting to apply, 0..1
-    return max(dot(eyeSpaceNormal, lightNormal), 0.1);
+    return dot(eyeSpaceNormal, lightNormal);
 }
 
 void main(void) {
     // TODO: affine texture mapping
     v_uv = uv;
 
-    #include <beginnormal_vertex>
+	#include <beginnormal_vertex>
     #include <skinbase_vertex>
     #include <skinnormal_vertex>
 
     #include <begin_vertex>
     #include <skinning_vertex>
-    
+
     // Transform the vertex into eye space ...the GTE way!
     // The GTE worked with integer vertices, so rounding after each matrix
     // multiplication (and doing model and view matrices separately) 
@@ -89,12 +86,22 @@ void main(void) {
     mvPosition = gte_round(mvPosition);
 
     // Lighting
+
+    // TODO: we don't use BRDF here, on the purpose, because it seems beyond
+    // what the hardware could do. But we should confirm.
+
+    // TODO: This gives directional lights (and others?) comparable 
+    // brightness to the stock shaders (but not the same!). The fact that it 
+    // seems to be exactly one-half is real weird and makes me think I'm
+    // missing a factor somewhere.
+    const float mysteriousMultiplier = 0.5;
+
     // TODO: flat shading. Currently doable via the three.js normals but maybe
     // it would be convenient to be able to force it here
-    // TODO: unroll loop
-    v_diffuse = vec3(0., 0., 0.);
-    for (int i = 0; i < directionalLights.length(); i++) {
-        v_diffuse += gouraud(directionalLights[i]) * directionalLights[i].color;
+    // TODO: unroll loop & use NUM_DIR_LIGHTS
+    v_diffuse = vec3(0.0);
+    for(int i = 0; i < directionalLights.length(); i++) {
+        v_diffuse += gouraud(directionalLights[i], normal) * directionalLights[i].color * mysteriousMultiplier;
     }
 
     #include <fog_vertex>
