@@ -3,8 +3,16 @@
  */
 
 const SKY_COLOR = 0x87ceeb
+const NIGHT_SKY_COLOR = 0x001133
 // Hardcode a period-accurate aspect ratio
 const aspect = 4 / 3
+
+const scripts = {
+    three: 'https://unpkg.com/three@0.141/build/three.min.js',
+    gltfLoader:
+        'https://unpkg.com/three@0.141/examples/js/loaders/GLTFLoader.js',
+    guify: 'https://unpkg.com/guify@0.15.1/lib/guify.min.js',
+}
 
 // State
 
@@ -13,6 +21,7 @@ const resolution = [320, 240]
 
 let gl, scene, camera, sun, ambient
 let house
+let sunColors = {}
 
 let shaderEnabled = true
 let playShader
@@ -44,8 +53,6 @@ function pageActive() {
 
 function loadScript(url) {
     return new Promise((resolve) => {
-        console.log('loading!', url)
-
         const script = document.createElement('script')
         script.async = true
         script.src = url
@@ -59,9 +66,7 @@ function loadScript(url) {
 
 async function loadGltfLoader() {
     await promises.three
-    await loadScript(
-        'https://unpkg.com/three@0.140.2/examples/js/loaders/GLTFLoader.js'
-    )
+    await loadScript(scripts.gltfLoader)
     promises.resolved += 1
 }
 
@@ -76,7 +81,6 @@ async function loadModel() {
 }
 
 async function fetchShader(type) {
-    console.log('fetching', type)
     const file = await fetch(`playshader.${type}`)
     const text = await file.text()
     promises.resolved += 1
@@ -84,13 +88,10 @@ async function fetchShader(type) {
 }
 
 promises.ready = pageActive()
-promises.three = loadScript(
-    'https://unpkg.com/three@0.140.2/build/three.min.js'
-)
+promises.three = loadScript(scripts.three)
 promises.gltfLoader = loadGltfLoader()
-promises.guify = loadScript('https://unpkg.com/guify@0.15.1/lib/guify.min.js')
+promises.guify = loadScript(scripts.guify)
 
-// console.dir(promises.gltfLoader)
 promises.model = loadModel()
 promises.vertexShader = fetchShader('vert')
 promises.fragmentShader = fetchShader('frag')
@@ -106,7 +107,6 @@ let resourcesLoaded = 0
 let resourcesTotal = 7
 
 function updateProgress() {
-    console.dir(Object.keys(promises))
     const promisesTotal = Object.keys(promises).length - 1
 
     // One of the promises is incrementing `resolved` twice. How about that
@@ -123,8 +123,6 @@ function updateProgress() {
 }
 
 function gltfLoadingProgress(url, itemsLoaded, itemsTotal) {
-    console.log('Loading:', url, itemsLoaded, itemsTotal)
-
     resourcesLoaded = itemsLoaded
 }
 
@@ -132,9 +130,6 @@ main()
 
 async function main() {
     updateProgress()
-
-    console.log('preloading')
-    console.log(document.readyState)
 
     document.body.className = 'loading'
 
@@ -185,14 +180,23 @@ async function main() {
 
     // Lighting
 
-    const ambient = new THREE.AmbientLight(0x404040, 0.5)
+    ambient = new THREE.AmbientLight(0x7f7f7f, 0.5)
     scene.add(ambient)
 
-    sun = new THREE.DirectionalLight(0xffffff, 3)
-    sun.color.setHSL( 0.1, 1, 0.95 );
-    sun.position.set(0, 20, 5)
-    sun.target.position.set(0, 0, 0)
+    sun = new THREE.DirectionalLight(0xffffff, 0.5)
+    sun.position.set(0, 10, 0)
+    // sun.target.position.set(0, 0, 0)
     scene.add(sun)
+    // scene.add(sun.target)
+
+    sunColors.day = new THREE.Color(0xffe6e5) // sorta pinkish?
+    sunColors.night = new THREE.Color(0x122fbc)
+    sun.color.copy(sunColors.day)
+
+    {
+        // const helper = new THREE.DirectionalLightHelper(sun, 3)
+        // scene.add(helper)
+    }
 
     // Camera
     {
@@ -201,7 +205,7 @@ async function main() {
         const far = 1000
         camera = new THREE.PerspectiveCamera(fov, aspect, near, far)
         // camera.aspect
-        camera.position.set(0, 9, 14)
+        camera.position.set(0, 9, 15)
         camera.lookAt(0, 3, 0)
     }
 
@@ -216,20 +220,28 @@ async function main() {
     house.traverse((obj) => {
         if (obj.name === 'lantern') {
             // TODO: find a way to make it look like this is lighting up the lantern, perhaps?
-            const ptLight = new THREE.PointLight(0x0033ff, 10, 2, 1)
+            const ptLight = new THREE.PointLight(0xffff00, 10, 2, 1)
             ptLight.position.copy(obj.position)
             obj.parent.add(ptLight)
         }
 
-        if (obj.material) {
-            const oldMaterial = obj.material
+        if (obj.material && obj.material.map) {
+            const map = obj.material.map
+            map.format = THREE.RGBAFormat
+            map.encoding = THREE.sRGBEncoding
+
+            const stockMaterial = new THREE.MeshLambertMaterial({
+                map: obj.material.map,
+                side: THREE.DoubleSide,
+            })
+
             const newMaterial = playShader
-            stockShaders.set(obj, oldMaterial.clone())
+            // Necessary for the flat objects in this scene
+            newMaterial.side = THREE.DoubleSide
+            stockShaders.set(obj, stockMaterial)
 
             obj.material = newMaterial.clone()
-            obj.material.uniforms.map.value = oldMaterial.map.clone()
-
-            oldMaterial.dispose()
+            obj.material.uniforms.map.value = map.clone()
         }
     })
 
@@ -237,6 +249,7 @@ async function main() {
 
     // Set up a UI for testing params
 
+    await promises.guify
     const gui = new guify({
         title: 'playshader-one',
         theme: 'light',
@@ -264,8 +277,14 @@ async function main() {
         // prettier-ignore
         {
             type: 'range', label: 'Sunlight',
-            min: 0, max: 5, step: 0.25,
+            min: 0, max: 3, step: 0.25,
             object: sun, property: 'intensity',
+        },
+        // prettier-ignore
+        {
+            type: 'range', label: 'Ambient',
+            min: 0, max: 1, step: 0.125,
+            object: ambient, property: 'intensity',
         },
         // prettier-ignore
         {
@@ -282,18 +301,18 @@ async function main() {
         {
             type: 'display', label: 'Model',
             initial: `<a href="https://skfb.ly/KDxV">\u201cThe Neko Stop-off\u201d by Art by Kidd</a>`
-        }
+        },
     ])
 
     // And, go
 
     lastTime = performance.now()
     requestAnimationFrame(render)
-    document.body.style.backgroundColor = `#${SKY_COLOR.toString(16)}`
+    // document.body.style.backgroundColor = `#${SKY_COLOR.toString(16)}`
     document.body.className = 'loaded'
 }
 
-const lightMoveSpeed = 50
+const lightMoveSpeed = 1 / 3
 function render(time) {
     // We don't really need to do this every time the event fires
     if (needsResize) {
@@ -325,8 +344,20 @@ function render(time) {
     if (house) {
         requestAnimationFrame(render)
         house.rotateY(Math.PI * 0.05 * delta)
-        sun.position.x = Math.sin(totalTime / lightMoveSpeed) * 30
-        sun.position.z = Math.cos(totalTime / lightMoveSpeed) * 5
+        sun.position.set(
+            Math.sin(totalTime * (lightMoveSpeed * 0.5)) * -10,
+            sun.position.y,
+            Math.cos(totalTime * lightMoveSpeed) * 4
+        )
+        const timeofday = sineCutoff(sun.position.z, 2)
+        sun.color.lerpColors(sunColors.day, sunColors.night, timeofday)
+        scene.background.lerpColors(
+            new THREE.Color(SKY_COLOR),
+            new THREE.Color(NIGHT_SKY_COLOR),
+            timeofday
+        )
+        sun.intensity = THREE.MathUtils.lerp(0.5, 1, timeofday)
+        ambient.intensity = THREE.MathUtils.lerp(1, 0.125, timeofday)
     } else if (loading) {
         requestAnimationFrame(render)
         loading.rotateY(Math.PI * 2 * delta)
@@ -357,9 +388,9 @@ function setPlayShaderEnabled(enable) {
 
             // leave the old texture in the stock shader
             if (enable) {
-                const texture = stock.map.clone()
+                const texture = stock.map
                 newShader.uniforms.map.value = texture
-                newShader.needsUpdate = true
+                // newShader.needsUpdate = true
             }
 
             if (oldShader !== stock) {
@@ -372,4 +403,10 @@ function setPlayShaderEnabled(enable) {
 
     // The normal shader is shown at full res
     needsResize = true
+}
+
+function sineCutoff(val, limit) {
+    return (
+        (THREE.MathUtils.clamp(val * -1, -limit, limit) + limit) / (limit * 2)
+    )
 }
