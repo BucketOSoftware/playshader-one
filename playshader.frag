@@ -4,6 +4,10 @@ precision mediump float;
 #error TODO: non-ES compatibility
 #endif
 
+#ifndef USE_MAP
+#define USE_MAP // TODO: figure out why three.js isn't setting this
+#endif
+
 // TODO: verify/fix compatibility with __VERSION__ == 100
 
 #if __VERSION__ >= 300
@@ -11,14 +15,12 @@ layout(location = 0) out highp vec4 pc_fragColor;
 #define gl_FragColor pc_fragColor
 #endif
 
-// Color map, i.e. "the texture"
-uniform sampler2D map;
-
 uniform vec3 ambientLightColor;
 
 varying vec2 v_uv;
 varying vec3 v_diffuse;
 
+#include <map_pars_fragment>
 #include <fog_pars_fragment>
 
 const mat4 psx_dither_matrix = transpose(mat4(
@@ -57,9 +59,19 @@ vec4 psx_dither(in vec4 color) {
 }
 
 void main(void) {
+#ifdef USE_MAP
     // Sample the texture
     // TODO: emulate original hardware's texture transparency
-    vec4 texel = texture2D(map, v_uv);
+    #if __VERSION__ >= 300
+        vec2 mapSize = vec2(textureSize(map, 0));
+        vec4 texel = texelFetch(map, ivec2(v_uv * mapSize), 0);
+    #else
+        // TODO: nearest neighbor in a way that's compatible with 100. Round the UVs?
+        vec4 texel = texture2D(map, v_uv);
+    #endif
+#else
+    vec4 texel = vec4(1.0);
+#endif
 
     // TODO: Round off the color depth of the texel if desired, but doing a
     // simple multiply-round-divide doesn't seem right. Maybe quantize ahead of
