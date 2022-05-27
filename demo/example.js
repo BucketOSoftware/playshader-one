@@ -280,7 +280,7 @@ async function main() {
         // prettier-ignore
         {
             type: 'display', label: 'Model',
-            initial: `<a href="(https://skfb.ly/KDxV)">\u201cThe Neko Stop-off\u201d by Art by Kidd</a>`
+            initial: `<a href="https://skfb.ly/KDxV">\u201cThe Neko Stop-off\u201d by Art by Kidd</a>`
         }
     ])
 
