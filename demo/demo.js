@@ -16,8 +16,6 @@ const scripts = {
 
 // State
 
-// Commonly used resolution for the hardware
-const resolution = [320, 240]
 
 let gl, scene, camera, sun, ambient
 let house
@@ -32,6 +30,35 @@ let totalTime = 0
 
 let needsResize = true
 window.addEventListener('resize', () => (needsResize = true))
+
+// Interface for user parameters
+let options = {
+    dayCycle: true,
+
+    // Commonly used resolution for the hardware
+    _renderWidth: 320,
+    _renderHeight: 240,
+    
+    get resolution() {
+        return [this._renderWidth, this._renderHeight]
+    },
+
+    get resolutionString() {
+        return this.resolution.join('×');
+    },
+
+    set resolutionString(str) {
+        const [w, h] = str.split('×').map((n) => Number.parseInt(n))
+    
+        this._renderWidth = w
+        this._renderHeight = h
+        if (playShader) {
+            playShader.uniforms.resolution.value = [w, h]
+        }
+        needsResize = true
+    }
+}
+
 
 // Promises-based async loading system for scripts and assets
 
@@ -149,7 +176,7 @@ async function main() {
             THREE.UniformsLib.lights,
             THREE.UniformsLib.fog,
             {
-                resolution: { value: resolution },
+                resolution: { value: options.resolution },
                 map: { value: null },
             },
         ]),
@@ -163,7 +190,7 @@ async function main() {
 
     gl = new THREE.WebGLRenderer({ antialias: false })
     gl.outputEncoding = THREE.sRGBEncoding
-    gl.setSize(...resolution)
+    gl.setSize(options._renderWidth, options._renderHeight)
     // Ask the browser to upscale in a chunky fashion
     gl.domElement.style.imageRendering = 'pixelated'
     gl.domElement.imageSmoothingEnabled = false
@@ -267,14 +294,14 @@ async function main() {
         // prettier-ignore
         {
             type: 'select', label: 'Resolution',
-            initial: resolution.join('×'),
-            options: [
-                // Common resolutions and one very unlikely one
-                '256×224', '320×240', '512×240', '640×480', '1440×1080'
-            ],
-            onChange: setResolution
+            // initial: options.resolutionString,
+            // Common resolutions and one very unlikely one
+            options:
+                ['256×224', '320×240', '512×240', '640×480', '1440×1080'],
+            object: options, property: 'resolutionString',
         },
         // prettier-ignore
+        /*
         {
             type: 'range', label: 'Sunlight',
             min: 0, max: 3, step: 0.25,
@@ -285,6 +312,10 @@ async function main() {
             type: 'range', label: 'Ambient',
             min: 0, max: 1, step: 0.125,
             object: ambient, property: 'intensity',
+        },
+        */
+        {   type: 'checkbox', label: 'Day Cycle',
+            object: options, property: 'dayCycle'
         },
         // prettier-ignore
         {
@@ -308,7 +339,6 @@ async function main() {
 
     lastTime = performance.now()
     requestAnimationFrame(render)
-    // document.body.style.backgroundColor = `#${SKY_COLOR.toString(16)}`
     document.body.className = 'loaded'
 }
 
@@ -319,7 +349,7 @@ function render(time) {
         if (shaderEnabled) {
             // We don't resize the canvas itself because we'd lose the low-res
             // appearance. Maybe there's a way to do that in glsl
-            gl.setSize(resolution[0], resolution[1])
+            gl.setSize(options._renderWidth, options._renderHeight)
             gl.setPixelRatio(1)
 
             const h = window.innerHeight
@@ -344,12 +374,18 @@ function render(time) {
     if (house) {
         requestAnimationFrame(render)
         house.rotateY(Math.PI * 0.05 * delta)
-        sun.position.set(
-            Math.sin(totalTime * (lightMoveSpeed * 0.5)) * -10,
-            sun.position.y,
-            Math.cos(totalTime * lightMoveSpeed) * 4
-        )
+        if (options.dayCycle) {
+            sun.position.set(
+                Math.sin(totalTime * (lightMoveSpeed * 0.5)) * -10,
+                sun.position.y,
+                Math.cos(totalTime * lightMoveSpeed) * 4
+            )
+        } else {
+            sun.position.set(5, sun.position.y, 2)
+        }
+
         const timeofday = sineCutoff(sun.position.z, 2)
+
         sun.color.lerpColors(sunColors.day, sunColors.night, timeofday)
         scene.background.lerpColors(
             new THREE.Color(SKY_COLOR),
@@ -365,15 +401,6 @@ function render(time) {
     gl.render(scene, camera)
 }
 
-function setResolution(res) {
-    const [w, h] = res.split('×').map((n) => Number.parseInt(n))
-    console.log(w, h)
-
-    resolution[0] = w
-    resolution[1] = h
-    playShader.uniforms.resolution.value = resolution // necessary?
-    needsResize = true
-}
 
 function setPlayShaderEnabled(enable) {
     shaderEnabled = enable
