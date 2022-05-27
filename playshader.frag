@@ -17,7 +17,7 @@ uniform sampler2D map;
 uniform vec3 ambientLightColor;
 
 varying vec2 v_uv;
-varying float v_diffuse;
+varying vec3 v_diffuse;
 
 #include <fog_pars_fragment>
 
@@ -62,7 +62,7 @@ void main(void) {
     vec4 texel = texture2D(map, v_uv);
 
     // Apply lighting
-    gl_FragColor = vec4(texel.rgb * (ambientLightColor + 1.0) * v_diffuse, texel.a);
+    gl_FragColor = vec4(texel.rgb * (ambientLightColor + v_diffuse), texel.a);
 
     #include <fog_fragment>
 

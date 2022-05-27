@@ -6,9 +6,12 @@
   "author": "Bucket o' Software",
   "license": "MPL-2.0",
   "type": "module",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+    "scripts": {},
+    "prettier": {
+        "tabWidth": 4,
+        "semi": false,
+        "singleQuote": true
+    },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/BucketOSoftware/playshader-one.git"

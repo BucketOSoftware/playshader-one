@@ -34,7 +34,7 @@ uniform vec2 resolution;
 varying vec2 v_uv;
 
 // Amount of light to apply (?)
-varying float v_diffuse;
+varying vec3 v_diffuse;
 
 #include <common>
 #include <fog_pars_vertex>
@@ -92,9 +92,9 @@ void main(void) {
     // TODO: flat shading. Currently doable via the three.js normals but maybe
     // it would be convenient to be able to force it here
     // TODO: unroll loop
-    v_diffuse = 1.0;
+    v_diffuse = vec3(0., 0., 0.);
     for (int i = 0; i < directionalLights.length(); i++) {
-        v_diffuse += gouraud(directionalLights[i]);
+        v_diffuse += gouraud(directionalLights[i]) * directionalLights[i].color;
     }
 
     #include <fog_vertex>

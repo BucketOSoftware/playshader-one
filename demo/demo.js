@@ -185,10 +185,11 @@ async function main() {
 
     // Lighting
 
-    const ambient = new THREE.AmbientLight(0x404040)
+    const ambient = new THREE.AmbientLight(0x404040, 0.5)
     scene.add(ambient)
 
     sun = new THREE.DirectionalLight(0xffffff, 3)
+    sun.color.setHSL( 0.1, 1, 0.95 );
     sun.position.set(0, 20, 5)
     sun.target.position.set(0, 0, 0)
     scene.add(sun)
