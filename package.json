@@ -1,6 +1,6 @@
 {
   "name": "playshader-one",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A GLSL shader that emulates the hardware of an old game console",
   "keywords": ["three", "threejs", "shader", "webgl", "glsl", "psx"],
   "author": "Bucket o' Software",
