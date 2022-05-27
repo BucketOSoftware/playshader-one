@@ -75,4 +75,7 @@ void main(void) {
 
     // Dither
     gl_FragColor = psx_dither(gl_FragColor);
+
+    // convert to renderer's color space
+    #include <encodings_fragment>
 }
