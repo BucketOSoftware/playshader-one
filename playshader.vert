@@ -106,6 +106,9 @@ void main(void) {
 
     #include <fog_vertex>
 
-    vec4 pos = gte_round(projectionMatrix * mvPosition);
-    gl_Position = pos;
+    vec4 screenSpacePos = gte_round(projectionMatrix * mvPosition);
+
+    screenSpacePos /= abs(screenSpacePos.w);
+
+    gl_Position = screenSpacePos;
 }
