@@ -3,6 +3,7 @@
  */
 
 const SKY_COLOR = 0x87ceeb
+// Hardcode a period-accurate aspect ratio
 const aspect = 4 / 3
 
 // State
@@ -171,6 +172,7 @@ async function main() {
     // Ask the browser to upscale in a chunky fashion
     gl.domElement.style.imageRendering = 'pixelated'
     gl.domElement.imageSmoothingEnabled = false
+
     const app = document.getElementById('app')
     app.prepend(gl.domElement)
     app.classList.remove('hidden')
@@ -273,6 +275,13 @@ async function main() {
                 [scene.fog.near, scene.fog.far] = range
             },
         },
+        // prettier-ignore
+        { type: 'title', label: 'Credits' },
+        // prettier-ignore
+        {
+            type: 'display', label: 'Model',
+            initial: `<a href="(https://skfb.ly/KDxV)">\u201cThe Neko Stop-off\u201d by Art by Kidd</a>`
+        }
     ])
 
     // And, go
