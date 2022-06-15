@@ -23,6 +23,12 @@ varying vec3 v_diffuse;
 #include <map_pars_fragment>
 #include <fog_pars_fragment>
 
+#if PSX_QUANTIZE_TEXTURES
+// const int texture_depth = 2; // this actually looks pretty neat on flat textures
+const int texture_depth = 5;
+const float texture_bpc = pow(2.0, float(texture_depth));
+#endif
+
 const mat4 psx_dither_matrix = transpose(mat4(
     // This is the PSX dithering matrix in row major order, but the mat4
     // constructor takes column major, so it's transposed above
@@ -65,6 +71,11 @@ void main(void) {
     #if __VERSION__ >= 300
         vec2 mapSize = vec2(textureSize(map, 0));
         vec4 texel = texelFetch(map, ivec2(v_uv * mapSize), 0);
+
+        #if PSX_QUANTIZE_TEXTURES
+            texel = round(texel * texture_bpc) / texture_bpc;
+        #endif
+
     #else
         // TODO: nearest neighbor in a way that's compatible with 100. Round the UVs?
         vec4 texel = texture2D(map, v_uv);

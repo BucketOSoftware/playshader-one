@@ -182,6 +182,7 @@ async function main() {
         ]),
         defines: {
             // NO_DITHERING: 1,
+            PSX_QUANTIZE_TEXTURES: 1,
         },
         glslVersion: THREE.GLSL3,
         vertexShader: vert,
