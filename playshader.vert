@@ -53,6 +53,7 @@ vec4 gte_round(in vec4 v) {
 
 // Returns the amount of light hitting the vertex, 0..1
 // TODO: support point lights (and other types?)
+#if NUM_DIR_LIGHTS > 0
 float gouraud(DirectionalLight light, vec3 geomNormal) {
     // Calculate the vert's normal in eye space
     vec3 eyeSpaceNormal = normalize((modelViewMatrix * vec4(geomNormal, 0.0)).xyz);
@@ -63,6 +64,7 @@ float gouraud(DirectionalLight light, vec3 geomNormal) {
     // Dot product of the two gives us the amount of lighting to apply, 0..1
     return dot(eyeSpaceNormal, lightNormal);
 }
+#endif
 
 void main(void) {
     // TODO: affine texture mapping
@@ -98,11 +100,16 @@ void main(void) {
 
     // TODO: flat shading. Currently doable via the three.js normals but maybe
     // it would be convenient to be able to force it here
-    // TODO: unroll loop & use NUM_DIR_LIGHTS
     v_diffuse = vec3(0.0);
-    for(int i = 0; i < directionalLights.length(); i++) {
+
+#if (NUM_DIR_LIGHTS > 0)
+    #pragma unroll_loop_start
+    for(int i = 0; i < NUM_DIR_LIGHTS; i++) {
         v_diffuse += gouraud(directionalLights[i], normal) * directionalLights[i].color * mysteriousMultiplier;
     }
+	#pragma unroll_loop_end
+#endif
+    
 
     #include <fog_vertex>
 
